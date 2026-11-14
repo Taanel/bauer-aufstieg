@@ -78,7 +78,7 @@ export const TEXT = {
     roundTitle2: 'THE KING CHARGES',
     roundTitle3: 'THE KING BLESSES',
     skill_lsprung_name: 'L-LEAP',
-    skill_lsprung_text: 'Leaps in an L – the landing hits everything around',
+    skill_lsprung_text: '3 knight leaps there and back – every landing hits all squares next to it',
     skill_sturmlauf_name: 'RAMPAGE',
     skill_sturmlauf_text: 'Charges straight to the edge and rams everything aside',
     skill_kreuzstrahl_name: 'CROSS BEAM',

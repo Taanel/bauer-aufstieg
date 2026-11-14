@@ -141,14 +141,15 @@ export const CONFIG = {
     lsprung: {
       name: 'L-SPRUNG',      // Name auf der Karte
       icon: '♞',             // Symbol auf der Karte
-      text: 'Springt im L – die Landung trifft alles drumherum', // Einzeiler auf der Karte
-      forward: 2,            // Felder in Bewegungsrichtung
-      side: 1,               // Felder zur Seite
-      time: 0.35,            // Dauer des Sprungs (Sekunden), unverwundbar
-      height: 1.2,           // Sprunghöhe
-      radius: 1.3,           // Treffer-Radius bei der Landung
-      damage: 3,             // Schaden
-      cooldown: 3.5,         // Abklingzeit (Sekunden)
+      text: '3 Springer-Sprünge hin und zurück – jede Landung trifft alle Felder daneben', // Einzeiler auf der Karte
+      // Die Sprünge nacheinander, jeweils [zur Seite, nach vorn] in Feldern (vorn = Blickrichtung).
+      // Standard: 1. hin (L nach vorn), 2. zurück (L zurück aufs Startfeld), 3. hin (L zur anderen Seite)
+      hops: [[1, 2], [-1, -2], [-1, 2]],
+      time: 0.28,            // Dauer eines einzelnen Sprungs (Sekunden), die ganze Zeit unverwundbar
+      height: 1.0,           // Sprunghöhe
+      radius: 1.5,           // Treffer-Radius bei jeder Landung (1.5 = alle 8 Felder direkt daneben)
+      damage: 2,             // Schaden pro Landung
+      cooldown: 4.5,         // Abklingzeit (Sekunden)
     },
     sturmlauf: {
       name: 'STURMLAUF',     // Name auf der Karte

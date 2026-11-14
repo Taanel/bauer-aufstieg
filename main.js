@@ -887,18 +887,21 @@ function useSkill(p) {
   const b = baseCell(p);
 
   if (p.skill === 'lsprung') {
-    // L-Sprung: 2 Felder geradeaus + 1 zur Seite. Seite = die, die näher am König liegt.
+    // L-Sprung: mehrere Springer-Sprünge hintereinander (siehe CONFIG.skills.lsprung.hops).
+    // Die Seite wird so gewählt, dass der erste Sprung näher am König landet.
     const f = mainAxis(aimDir(p));
-    const sideX = -f.z, sideZ = f.x;
-    const land = (s) => ({ x: snap(b.x + f.x * S.forward + sideX * s * S.side), z: snap(b.z + f.z * S.forward + sideZ * s * S.side) });
-    let to = land(1);
+    const sideX = -f.z, sideZ = f.x;                       // "zur Seite" = senkrecht zur Blickrichtung
+    const plan = (sign) => S.hops.map(([sd, fw]) => ({ dx: f.x * fw + sideX * sd * sign, dz: f.z * fw + sideZ * sd * sign }));
+    let hops = plan(1);
     if (boss && !boss.dead) {
-      const other = land(-1);
-      if (Math.hypot(other.x - boss.x, other.z - boss.z) < Math.hypot(to.x - boss.x, to.z - boss.z)) to = other;
+      const other = plan(-1);
+      const d = (h) => Math.hypot(b.x + h[0].dx - boss.x, b.z + h[0].dz - boss.z);
+      if (d(other) < d(hops)) hops = other;
     }
     p.step = null;
-    p.jump = { fromX: p.x, fromZ: p.z, toX: to.x, toZ: to.z, t: 0, S };
-    burst(p.x, 0.1, p.z, CONFIG.colors.gold, 8, 1.5);
+    p.x = b.x; p.z = b.z;
+    p.jump = { hops, index: -1, S };
+    nextHop(p);
     SFX.skill();
   } else if (p.skill === 'sturmlauf') {
     // Sturmlauf: geradeaus bis zum Brettrand
@@ -930,7 +933,25 @@ function useSkill(p) {
   p.skillCd = S.cooldown;
 }
 
-// L-Sprung: Bogen durch die Luft, Landung trifft alles im Radius
+// L-Sprung: nächsten Sprung vorbereiten (Ziel auf ein Feld runden, L-Weg golden zeigen)
+function nextHop(p) {
+  const j = p.jump;
+  j.index++;
+  const h = j.hops[j.index];
+  j.fromX = p.x; j.fromZ = p.z;
+  j.toX = snap(p.x + h.dx); j.toZ = snap(p.z + h.dz);
+  j.t = 0;
+  // der L-Weg: zwei Felder in der langen Richtung, dann eins zur Seite
+  const longX = Math.abs(h.dx) === 2, sx = Math.sign(h.dx), sz = Math.sign(h.dz);
+  const path = longX ? [[sx, 0], [2 * sx, 0], [2 * sx, sz]] : [[0, sz], [0, 2 * sz], [sx, 2 * sz]];
+  for (const [ox, oz] of path) {
+    const cx = p.x + ox, cz = p.z + oz;
+    if (Math.abs(cx) <= 3.5 && Math.abs(cz) <= 3.5) goldTile(cx, cz);
+  }
+  burst(p.x, 0.1, p.z, CONFIG.colors.gold, 6, 1.4);
+}
+
+// L-Sprung: Bogen durch die Luft, jede Landung trifft alle Felder daneben
 function updateJump(p, dt) {
   const j = p.jump;
   j.t += dt;
@@ -940,16 +961,22 @@ function updateJump(p, dt) {
   p.y = Math.sin(k * Math.PI) * j.S.height;
   if (k < 1) return;
   p.y = 0;
-  p.jump = null;
+  p.x = j.toX; p.z = j.toZ;
+  // Landung: Schaden auf allen Feldern direkt daneben (3×3 um die Figur)
   for (const t of liveTargets()) {
-    if (Math.hypot(t.x - p.x, t.z - p.z) <= j.S.radius + t.radius) damageTarget(t, j.S.damage, p.x, p.z);
+    if (Math.hypot(t.x - p.x, t.z - p.z) <= j.S.radius + t.radius * 0.3) damageTarget(t, j.S.damage, p.x, p.z);
   }
-  goldTiles(p.x, p.z, j.S.radius);
-  flashLight(p.x, p.z, CONFIG.colors.gold, 18);
+  for (const [ox, oz] of [[0, 0], ...DIRS8]) {
+    const cx = p.x + ox, cz = p.z + oz;
+    if (Math.abs(cx) <= 3.5 && Math.abs(cz) <= 3.5) goldTile(cx, cz);
+  }
   shockRing(p.x, p.z, j.S.radius, CONFIG.colors.gold);
-  burst(p.x, 0.2, p.z, CONFIG.colors.gold, 16, 2.6);
-  state.shake = J.shakeTime * 0.6;
+  burst(p.x, 0.2, p.z, CONFIG.colors.gold, 12, 2.4);
+  flashLight(p.x, p.z, CONFIG.colors.gold, 16);
+  state.shake = J.shakeTime * 0.45;
   SFX.skillLand();
+  if (j.index < j.hops.length - 1) nextHop(p);   // nächster Sprung
+  else p.jump = null;                           // fertig
 }
 
 // Sturmlauf: schnell geradeaus, rammt alles zur Seite, goldene Spur
