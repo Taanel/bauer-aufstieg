@@ -1,0 +1,8 @@
+Hier die Dateien vom Designer ablegen:
+  pieces.glb            – alle Figuren (Objektnamen: pawn_light, pawn_dark, knight_dark, bishop_dark, rook_dark, queen_dark, king_dark)
+  map1.glb … map5.glb   – die 5 Maps (Brett + Deko). Das Brett in jeder Map heißt "board".
+Fehlt eine Datei, zeigt das Spiel automatisch Ersatzfiguren bzw. ein Ersatz-Brett.
+Prozedurale Materialien (Noise-/Voronoi-Knoten) vor dem Export zu Bild-Texturen backen, max. 1024 px.
+Animationen: beim Export "Animation" anhaken (Modus "Actions"), jede Action klar benennen (z. B. king_defeat).
+Die Testszene zeigt die gefundenen Namen oben links; Taste A spielt sie ab.
+Welche Animation bei welchem Ereignis kommt, steht in config.js unter "blenderAnims".

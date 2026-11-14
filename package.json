@@ -1,0 +1,16 @@
+{
+  "name": "bauer-aufstieg",
+  "version": "1.0.0",
+  "description": "Koop-Bossfight auf dem Schachbrett (Game Jam Berlin 2026)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "three": "^0.187.0"
+  }
+}

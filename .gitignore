@@ -1,0 +1,6 @@
+# Wird mit "npm install" wiederhergestellt (Three.js)
+node_modules/
+# Mac-Systemdateien
+.DS_Store
+# Lokale Einstellungen von Claude Code
+.claude/
