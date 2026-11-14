@@ -32,7 +32,7 @@
 
 ## 2. Spielidee (Version 2)
 
-> **5 Bosse (Entscheidung 14.11., 16:20, ersetzt „König leiht sich Kräfte“):** Runde 1 Springer → 2 Läufer → 3 Turm → 4 Dame (wechselt Turm-/Läufer-Muster) → 5 König (wechselt alle drei). Belohnungen: L-Sprung (3 L-Sprünge hin/zurück, Schaden auf Nachbarfeldern), Kreuzstrahl, Sturmlauf, Sternstrahl (8 Richtungen). Einstellbar in `CONFIG.rounds` und `CONFIG.patternMix`. Eine Map pro Runde.
+> **5 Bosse (Entscheidung 14.11., 16:20, ersetzt „König leiht sich Kräfte“):** Runde 1 Springer → 2 Läufer → 3 Turm → 4 Dame (wechselt Turm-/Läufer-Muster) → 5 König (wechselt alle drei). Belohnungen: L-Sprung (3 L-Sprünge hin/zurück, Schaden auf Nachbarfeldern), Heilung (Läufer: heilt beide +2, holt Gefallene mit 1 Herz zurück), Sturmlauf, Sternstrahl (8 Richtungen). Kreuzstrahl ist noch im Code, wird aber nicht mehr vergeben. Einstellbar in `CONFIG.rounds` und `CONFIG.patternMix`. Eine Map pro Runde.
 
 **In einem Satz:** Zwei Bauern kämpfen im lokalen Koop auf einem Schachbrett Runde für Runde gegen den gegnerischen **König**. In jeder Runde leiht sich der König die Kraft einer anderen Figur. Wer ihn besiegt, **erbeutet genau diese Kraft** als Fähigkeit und darf vor der nächsten Runde wählen, welche Fähigkeit er einsetzt.
 
@@ -191,6 +191,7 @@ Grundverhalten in allen Runden:
 **Störer in jeder Runde:** gegnerische Bauern (`pawn_dark`), 2 LP, laufen langsam (1,1 Felder/s) auf den nächsten Spieler zu, Berührung = 1 Schaden. Alle 6 s erscheinen 2 neue am oberen Rand, maximal 6 gleichzeitig. Bei Rundensieg verschwinden alle.
 
 ### 6.6 Maps (Entscheidung 14.11., nach Version 2 ergänzt)
+- **Stand 16:30:** Die 5 Maps des Designers liegen in EINER Datei `assets/maps/9_BanCo_CacMan.glb`, jede als eigene glTF-Szene (`Man1_RungNgoc` Jade-Wald, `Man2_CungBang` Eispalast, `Man3_SaMacHoangKim` Goldene Wüste, `Man4_HuKhong` Leere, `Man5_NgaiVangHoaNguc` Höllenthron). `CONFIG.maps[i].scene/board` wählt sie aus. Deko-Figuren werden entfernt (`CONFIG.mapFix.excludePrefixes`), das Schachmuster wird per Vertex-Farben neu gesetzt (Knoten-Material kam nicht mit), Deko-Leuchten gedämpft (`decoGlow`, pro Map änderbar).
 - Es gibt **5 Maps**. Sie sind **nur Optik**: Brett-Look, Deko, Hintergrundfarbe. Spielfeld, Kollision und Regeln sind auf jeder Map gleich (8×8, keine Hindernisse).
 - Nach jedem besiegten Boss wechselt die Map. Reihenfolge in `CONFIG.mapPerRound`.
 - Alle Maps werden beim Start geladen und einmal vorgezeichnet, damit der Wechsel nicht ruckelt. Funktion `showMap(index)` in `main.js`.

@@ -37,7 +37,8 @@ const BOARD_HALF = 4;   // Brett geht von -4 bis +4 (8×8 Felder)
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.render.maxPixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+// Farbdarstellung: AgX ist auch in Blender (ab Version 4) Standard → Farben und Leuchten wirken wie dort
+renderer.toneMapping = CONFIG.render.toneMapping === 'aces' ? THREE.ACESFilmicToneMapping : THREE.AgXToneMapping;
 renderer.toneMappingExposure = CONFIG.light.exposure;   // Gesamthelligkeit
 renderer.shadowMap.enabled = CONFIG.light.shadows;
 renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -52,13 +53,15 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = CONFIG.light.envIntensity;
 
 // Boden unter dem Brett: dunkle Fläche + feines Raster, verschwindet in der Ferne im Nebel
+// (unbeleuchtet und ohne Farbumrechnung: zeigt genau die Hintergrundfarbe der Map, wie die Welt in Blender)
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80),
-  new THREE.MeshStandardMaterial({ color: '#2a0806', roughness: 0.55, metalness: 0.1 }));
+  new THREE.MeshBasicMaterial({ color: '#2a0806', toneMapped: false }));
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -0.56;
 floor.receiveShadow = true;
 scene.add(floor);
 const grid = new THREE.GridHelper(60, 60, '#ffffff', '#ffffff');   // Farbe kommt pro Map in showMap()
+grid.material.toneMapped = false;
 grid.position.y = -0.55;
 scene.add(grid);
 if (CONFIG.light.fog) scene.fog = new THREE.Fog(CONFIG.maps[0].background, CONFIG.light.fogNear, CONFIG.light.fogFar);
@@ -286,6 +289,10 @@ const SFX = {
     noise(0.8, 'highpass', 6000, 0.25, 0.48);
   },
   menuMove: () => tone(1200, 0.04, 'square', 900, 0.15, 0, sfxBus, false),
+  heal: () => {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => { tone(f, 0.5, 'sine', null, 0.22, i * 0.07); tone(f * 2, 0.3, 'triangle', null, 0.06, i * 0.07); });
+    noise(0.8, 'highpass', 7000, 0.15, 0.1);
+  },
   menuOk: () => { tone(880, 0.08, 'triangle', null, 0.3); tone(1320, 0.14, 'triangle', null, 0.3, 0.07); },
   start: () => [392, 523, 659, 784].forEach((f, i) => { tone(f, 0.18, 'triangle', null, 0.3, i * 0.08); tone(f * 2, 0.12, 'square', null, 0.05, i * 0.08); }),
   lose: () => [392, 349, 311, 262].forEach((f, i) => { tone(f, 0.4, 'sawtooth', null, 0.2, i * 0.22); tone(f / 2, 0.4, 'triangle', null, 0.3, i * 0.22); }),
@@ -435,8 +442,8 @@ function flatMesh(geo, color, opacity, additive = false) {
 // Ein goldenes, leuchtendes Feld – die Effektsprache aus Blender
 const TILE_GEO = new THREE.PlaneGeometry(0.96, 0.96);   // eine gemeinsame Form für alle goldenen Felder (spart Leistung)
 TILE_GEO.userData.shared = true;
-function goldTile(cx, cz) {
-  const t = flatMesh(TILE_GEO, CONFIG.colors.gold, 0.75);
+function goldTile(cx, cz, color = CONFIG.colors.gold) {
+  const t = flatMesh(TILE_GEO, color, 0.75);
   t.position.set(cx, 0.012, cz);
   addFx(t, 0.7);
 }
@@ -920,6 +927,15 @@ function useSkill(p) {
     p.charge = { toX: end.x, toZ: end.z, dx: f.x, dz: f.z, hits: new Set(), S, lastTile: '' };
     p.faceX = f.x; p.faceZ = f.z;
     SFX.charge();
+  } else if (p.skill === 'heilung') {
+    // Heilung (Läufer): heilt beide Spieler, holt einen gefallenen Mitspieler zurück
+    for (const q of players) {
+      if (q.alive) healPlayer(q, S.heal, S.color);
+      else if (S.reviveHp > 0) revivePlayer(q, S.reviveHp, S.color);
+    }
+    shockRing(p.x, p.z, 2.6, S.color);
+    flashLight(p.x, p.z, S.color, 18);
+    SFX.heal();
   } else if (p.skill === 'kreuzstrahl' || p.skill === 'sternstrahl') {
     // Kreuzstrahl: 4 Strahlen auf beiden Diagonalen, durchschlagend.
     // Sternstrahl (Dame): zusätzlich 4 gerade Strahlen = 8 Richtungen.
@@ -1014,6 +1030,36 @@ function updateCharge(p, dt) {
     state.shake = J.shakeTime * 0.6;
     SFX.skillLand();
   }
+}
+
+// Leben zurückgeben (mit grünen Feldern, Funken und "+2")
+function healPlayer(q, amount, color) {
+  const before = q.hp;
+  q.hp = Math.min(P.hp, q.hp + amount);
+  const gained = q.hp - before;
+  if (gained > 0) floatText(q.x, q.height + 0.5, q.z, `+${gained}`, 'heal');
+  for (const [ox, oz] of [[0, 0], ...DIRS8]) {
+    const cx = snap(q.x) + ox, cz = snap(q.z) + oz;
+    if (Math.abs(cx) <= 3.5 && Math.abs(cz) <= 3.5) goldTile(cx, cz, color);
+  }
+  for (let i = 0; i < 14; i++) {        // grüne Funken steigen auf
+    addParticle(color, q.x + (Math.random() - 0.5) * 0.6, 0.1, q.z + (Math.random() - 0.5) * 0.6, 0, 2 + Math.random() * 2, 0, 0.6 + Math.random() * 0.4);
+  }
+  q.hudKey = '';                        // Herzen in der Anzeige neu zeichnen
+}
+// Gefallenen Spieler wieder aufstellen
+function revivePlayer(q, hp, color) {
+  q.alive = true;
+  q.hp = 0;
+  q.dying = -1;
+  q.step = null; q.jump = null; q.charge = null;
+  q.y = 0;
+  q.x = snap(q.x); q.z = snap(q.z);
+  q.body.rotation.set(0, 0, 0);
+  q.invuln = 1.5;                       // kurz unverwundbar nach dem Aufstehen
+  q.walking = false;
+  healPlayer(q, hp, color);
+  shockRing(q.x, q.z, 1.2, color);
 }
 
 // Nächstes Ziel in Reichweite (oder null). Größere Ziele (König) zählen früher als "in Reichweite".
@@ -1611,7 +1657,7 @@ function showMap(index) {
   const cfg = models.maps[index].cfg;
   scene.background.set(cfg.background);
   scene.fog?.color.set(cfg.background);
-  floor.material.color.set(cfg.background).multiplyScalar(1.8);       // Boden: etwas heller als der Hintergrund, gleiche Farbe
+  floor.material.color.set(cfg.background);                          // Boden = Hintergrundfarbe (nahtlos)
   grid.material.color.set(cfg.background).lerp(new THREE.Color('#ffffff'), CONFIG.colors.gridBrightness);
   grid.visible = cfg.grid;
 }
@@ -1649,7 +1695,7 @@ function goToTitle() {
   clearWarnings();
   players.forEach((p) => { p.root.visible = false; });
   titleDecor.visible = true;
-  showMap(mapForRound(1));
+  showMap(CONFIG.titleMap ? models.maps.length - 1 : mapForRound(1));   // Titel: rotes Original-Brett
   hideAllScreens();
   show(ui.title, true);
   ui.hud.forEach((h) => show(h, false));
@@ -1744,11 +1790,8 @@ function openMenu() {
   hideAllScreens();
   showMap(mapForRound(state.round + 1));          // Map schon wechseln, hinter dem Menü
   players.forEach((p) => { resetPlayer(p); });
-  // Auswahl startet bei der aktuellen Fähigkeit, sonst bei der neuesten
-  state.menuSel = players.map((p) => {
-    const i = state.unlocked.indexOf(p.skill);
-    return i >= 0 ? i : state.unlocked.length - 1;
-  });
+  // Auswahl startet bei der NEU erbeuteten Fähigkeit (ganz rechts) – wer seine alte behalten will, wählt sie mit links/rechts
+  state.menuSel = players.map(() => state.unlocked.length - 1);
   state.menuReady = [false, false];
   renderMenu();
   show(ui.menu, true);
@@ -1925,7 +1968,7 @@ players.push(createPlayer(0), createPlayer(1));
 buildTitleDecor();
 
 // Nur zum Testen in der Browser-Konsole (z. B. __game.players[0].hp = 1). Stört das Spiel nicht.
-window.__game = { state, players, enemies, getBoss: () => boss, spawnWave, damagePlayer, damageBoss, CONFIG };
+window.__game = { state, players, enemies, getBoss: () => boss, spawnWave, damagePlayer, damageBoss, CONFIG, showMap, models };
 
 applyLang();
 show(ui.loading, false);

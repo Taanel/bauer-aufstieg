@@ -33,7 +33,7 @@ loader.setMeshoptDecoder(MeshoptDecoder);
 async function loadGLB(url) {
   try {
     const gltf = await loader.loadAsync(url);
-    return { scene: gltf.scene, animations: gltf.animations };
+    return { scene: gltf.scene, scenes: gltf.scenes, animations: gltf.animations };
   } catch (err) {
     console.warn('Nicht geladen (Ersatz wird benutzt):', url, err?.message ?? err);
     return null;
@@ -143,18 +143,27 @@ function fixMaterials(root, key) {
   const fix = CONFIG.materialFix;
   if (!fix?.enabled) return;
   const isEnemy = key !== 'pawn_light';
+  // Spieler aus klarem Glas (wie im Blender-Video). Ein Material für alle Teile der Figur.
+  const glass = !isEnemy && fix.allyGlass ? new THREE.MeshPhysicalMaterial({
+    color: fix.allyGlassTint, transmission: 0.92, thickness: 0.8, ior: 1.5, roughness: 0.06,
+    attenuationColor: new THREE.Color(fix.allyGlassTint), attenuationDistance: 0.6,   // dickes Glas wirkt leicht getönt
+    clearcoat: 1, clearcoatRoughness: 0.03, specularIntensity: 1, envMapIntensity: 1.3,
+  }) : null;
   root.traverse((o) => {
     if (!o.isMesh) return;
+    if (glass) o.material = glass;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       if (isEnemy) {
         if (m.color) m.color.set(fix.enemyColor);
         if ('roughness' in m) m.roughness = fix.enemyRoughness;
         if ('metalness' in m) m.metalness = fix.enemyMetalness;
+        if ('clearcoat' in m) { m.clearcoat = fix.enemyClearcoat; m.clearcoatRoughness = 0.05; }
         if (m.emissive) { m.emissive.set(fix.enemyGlow); m.emissiveIntensity = fix.enemyGlowStrength; m.emissiveMap = null; }
-      } else if (m.emissive) {
+      } else if (!glass && m.emissive) {
         m.emissiveIntensity *= fix.allyGlowScale;
       }
-      if (fix.rim && m.isMeshStandardMaterial) {
+      if (fix.rim && m.isMeshStandardMaterial && !m.userData.rim) {
+        m.userData.rim = true;
         addRimGlow(m, isEnemy ? fix.enemyRimColor : fix.allyRimColor, isEnemy ? fix.enemyRimStrength : fix.allyRimStrength);
       }
       m.needsUpdate = true;
@@ -266,10 +275,10 @@ function buildFallbackBoard(mapCfg) {
 // Es wird auf CONFIG.boardModelWidth Felder Breite skaliert, mittig auf (0, 0)
 // und mit der Oberkante auf y = 0 gesetzt. Alle Deko-Objekte drumherum
 // bewegen sich einfach mit. Gibt es kein "board", zählt die ganze Map.
-function normalizeMap(mapScene) {
+function normalizeMap(mapScene, boardName = CONFIG.modelNames.board) {
   const wrapper = new THREE.Group();
   wrapper.add(mapScene);
-  const ref = findByName(mapScene, CONFIG.modelNames.board) ?? mapScene;
+  const ref = findByName(mapScene, boardName) ?? mapScene;
   const box = new THREE.Box3();
 
   wrapper.updateMatrixWorld(true);
@@ -284,8 +293,116 @@ function normalizeMap(mapScene) {
   mapScene.position.z -= center.z;
   mapScene.position.y -= box.max.y;
 
-  wrapper.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = true; } });
+  // Map-Teile empfangen Schatten, werfen aber keine (spart Leistung bei vielen Deko-Teilchen)
+  wrapper.traverse((o) => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; } });
   return wrapper;
+}
+
+// ---------- Maps vom Designer nachbessern ----------
+// Figuren, die in der Map-Szene als Deko stehen, entfernen (das Spiel stellt eigene auf)
+function removeExcluded(root) {
+  const prefixes = CONFIG.mapFix?.excludePrefixes ?? [];
+  const remove = [];
+  root.traverse((o) => { if (o !== root && prefixes.some((p) => o.name.startsWith(p))) remove.push(o); });
+  remove.forEach((o) => o.parent?.remove(o));
+}
+
+// Marmor für die Map-Bretter: zwei passende Bilder aus denselben Adern
+//   veinsDark  = weiß mit grauen Adern (färbt helle Felder)
+//   veinsLight = schwarz mit weißen Adern (lässt auf dunklen Feldern helle Adern leuchten)
+let marbleTex = null;
+function getMarbleTextures() {
+  if (marbleTex) return marbleTex;
+  const size = 512;
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };   // immer gleiche Zufallszahlen
+  const veins = [];
+  for (let i = 0; i < 26; i++) {
+    const pts = [];
+    let x = rnd() * size, y = rnd() * size, ang = rnd() * Math.PI * 2;
+    for (let k = 0; k < 7; k++) { pts.push([x, y]); ang += (rnd() - 0.5) * 1.4; x += Math.cos(ang) * 70; y += Math.sin(ang) * 70; }
+    veins.push({ pts, w: 0.6 + rnd() * 2.2, a: 0.25 + rnd() * 0.6 });
+  }
+  const draw = (bg, fg) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    g.fillStyle = bg; g.fillRect(0, 0, size, size);
+    g.strokeStyle = fg; g.lineCap = 'round';
+    for (const v of veins) {
+      g.globalAlpha = v.a; g.lineWidth = v.w;
+      g.beginPath(); g.moveTo(...v.pts[0]);
+      for (let k = 1; k < v.pts.length - 1; k++) {
+        const [x1, y1] = v.pts[k], [x2, y2] = v.pts[k + 1];
+        g.quadraticCurveTo(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2);
+      }
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  marbleTex = { dark: draw('#ffffff', '#8c7f7f'), light: draw('#000000', '#ffffff') };
+  return marbleTex;
+}
+
+// Das Schachmuster der Felder kam beim Export nicht mit (Knoten-Material).
+// Deshalb bekommt jedes Dreieck des Bretts eine Farbe je nach Feld: hell oder dunkel.
+function fixMapMaterials(group, cfg) {
+  const fix = CONFIG.mapFix ?? {};
+  const board = findByName(group, cfg.board || CONFIG.modelNames.board);
+  group.updateMatrixWorld(true);
+  if (board?.isMesh) {
+    const geo = board.geometry.index ? board.geometry.toNonIndexed() : board.geometry.clone();
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const light = new THREE.Color(cfg.light), dark = new THREE.Color(cfg.dark);
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i += 3) {
+      // Mitte des Dreiecks in Brett-Koordinaten (Felder von -4 bis +4)
+      let cx = 0, cz = 0;
+      for (let k = 0; k < 3; k++) { v.fromBufferAttribute(pos, i + k).applyMatrix4(board.matrixWorld); cx += v.x / 3; cz += v.z / 3; }
+      const col = Math.floor(cx + 4 - 1e-4), row = Math.floor(cz + 4 - 1e-4);
+      const c = (col + row) % 2 === 0 ? light : dark;
+      for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (i + k) * 3);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    // Textur-Koordinaten aus der Lage auf dem Brett (alle 4 Felder wiederholt sich der Marmor)
+    const uvs = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(board.matrixWorld);
+      uvs[i * 2] = (v.x + 4) / 4; uvs[i * 2 + 1] = (v.z + 4) / 4;
+    }
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    board.geometry = geo;
+    const m = board.material.clone();
+    m.color?.set('#ffffff');
+    m.vertexColors = true;
+    if (CONFIG.marble) {
+      const tex = getMarbleTextures();
+      m.map = tex.dark;                               // graue Adern auf hellen Feldern
+      m.emissiveMap = tex.light;                      // helle Adern auf dunklen Feldern
+      m.emissive?.set(CONFIG.marbleVeins);
+      m.emissiveIntensity = CONFIG.marbleStrength ?? 0.4;
+      m.roughness = 0.18;
+      if ('clearcoat' in m) m.clearcoat = 0.6;
+    } else if (m.emissive) {
+      m.emissiveIntensity *= fix.boardGlow ?? 0.1;   // sonst leuchtet das ganze Brett
+    }
+    board.material = m;
+  }
+  // Leuchtende Deko etwas dämpfen, damit Bloom das Bild nicht überstrahlt
+  group.traverse((o) => {
+    if (!o.isMesh || o === board) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m.emissive && m.userData.glowFixed !== true) {
+        // Stärke wie in Blender, aber gedeckelt, damit die Farbe sichtbar bleibt statt weiß zu werden
+        m.emissiveIntensity = Math.min(m.emissiveIntensity * (cfg.decoGlow ?? fix.decoGlow ?? 1), fix.glowCap ?? 99);
+        m.userData.glowFixed = true;
+      }
+    }
+  });
 }
 
 // ---------- Hauptfunktion ----------
@@ -297,14 +414,15 @@ function normalizeMap(mapScene) {
 // und es beim Map-Wechsel später kein Ruckeln gibt.
 export async function loadModels() {
   const singleFiles = PIECE_KEYS.map((k) => CONFIG.pieceFiles?.[k] || null);
+  const mapList = CONFIG.titleMap ? [...CONFIG.maps, CONFIG.titleMap] : CONFIG.maps;   // letzte = Titel-Map
   const loaded = await Promise.all([
     loadGLB(CONFIG.modelFiles.pieces),
-    ...CONFIG.maps.map((m) => loadGLB(m.file)),
+    ...mapList.map((m) => loadGLB(m.file)),
     ...singleFiles.map((f) => (f ? loadGLB(f) : null)),
   ]);
   const piecesFile = loaded[0];
-  const mapFiles = loaded.slice(1, 1 + CONFIG.maps.length);
-  const pieceSingles = loaded.slice(1 + CONFIG.maps.length);
+  const mapFiles = loaded.slice(1, 1 + mapList.length);
+  const pieceSingles = loaded.slice(1 + mapList.length);
 
   const piecesScene = piecesFile?.scene;
   const templates = {};
@@ -331,9 +449,21 @@ export async function loadModels() {
     }
   });
 
-  const maps = CONFIG.maps.map((cfg, i) => {
+  const maps = mapList.map((cfg, i) => {
     const file = mapFiles[i];
-    if (file) return { group: normalizeMap(file.scene), source: 'blender', cfg, clips: file.animations };
+    if (file) {
+      // Eine Datei kann mehrere Szenen enthalten (eine pro Map) → die richtige auswählen
+      const source = cfg.scene ? file.scenes?.find((sc) => sc.name === cfg.scene) : file.scene;
+      if (source) {
+        const mapScene = deepClone(source);
+        removeExcluded(mapScene);
+        const group = normalizeMap(mapScene, cfg.board || CONFIG.modelNames.board);
+        fixMapMaterials(group, cfg);
+        // nur Animationen, deren Objekte noch in der Map sind (nicht die der entfernten Figuren)
+        return { group, source: 'blender', cfg, clips: clipsFor(mapScene, file.animations) };
+      }
+      console.warn('Map-Szene nicht gefunden:', cfg.scene);
+    }
     return { group: buildFallbackBoard(cfg), source: 'ersatz', cfg, clips: [] };
   });
 

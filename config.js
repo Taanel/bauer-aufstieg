@@ -10,7 +10,7 @@ export const CONFIG = {
   // ---------- Farben ----------
   colors: {
     // Hintergrund und Brettfarben stehen pro Map weiter unten bei "maps"
-    gridBrightness: 0.08,    // wie viel heller die Rasterlinien als der Hintergrund sind (0 = unsichtbar)
+    gridBrightness: 0.18,    // wie viel heller die Rasterlinien als der Hintergrund sind (0 = unsichtbar)
     boardBase: '#2a0405',    // Sockel/Rand des Ersatz-Bretts
     goldFrame: true,         // goldener Rahmen ums Brett (false = aus, z. B. wenn die Map einen eigenen hat)
     impactLights: true,      // Lichtblitze bei Einschlägen und Fähigkeiten (beleuchten die Figuren)
@@ -83,7 +83,7 @@ export const CONFIG = {
   rounds: [
     // boss = welche Figur der Boss ist, power = welches Angriffs-Muster (siehe "patterns" und "patternMix")
     { title: 'DER SPRINGER REITET', boss: 'knight_dark', power: 'knight', bossHp: 30, reward: 'lsprung' },     // Runde 1
-    { title: 'DER LÄUFER SEGNET', boss: 'bishop_dark', power: 'bishop', bossHp: 35, reward: 'kreuzstrahl' },  // Runde 2
+    { title: 'DER LÄUFER SEGNET', boss: 'bishop_dark', power: 'bishop', bossHp: 35, reward: 'heilung' },  // Runde 2
     { title: 'DER TURM STÜRMT', boss: 'rook_dark', power: 'rook', bossHp: 40, reward: 'sturmlauf' },          // Runde 3
     { title: 'DIE DAME HERRSCHT', boss: 'queen_dark', power: 'queen', bossHp: 50, reward: 'sternstrahl' },     // Runde 4
     { title: 'SCHACH DEM KÖNIG', boss: 'king_dark', power: 'king', bossHp: 60, reward: '' },                  // Runde 5 (Finale)
@@ -171,6 +171,15 @@ export const CONFIG = {
       push: 1.2,             // wie weit Getroffene zur Seite fliegen
       cooldown: 5,           // Abklingzeit (Sekunden)
     },
+    heilung: {
+      name: 'HEILUNG',       // Name auf der Karte
+      icon: '✚',             // Symbol auf der Karte
+      text: 'Heilt euch beide – und holt einen gefallenen Mitspieler zurück', // Einzeiler auf der Karte
+      heal: 2,               // so viele Herzen bekommt jeder lebende Spieler zurück
+      reviveHp: 1,           // mit so vielen Herzen steht ein gefallener Mitspieler wieder auf (0 = nie)
+      color: '#6dffa8',      // Farbe der Heilung (grün)
+      cooldown: 8,           // Abklingzeit (Sekunden)
+    },
     sternstrahl: {
       name: 'STERNSTRAHL',   // Name auf der Karte
       icon: '♛',             // Symbol auf der Karte
@@ -233,22 +242,24 @@ export const CONFIG = {
 
   // ---------- Licht ----------
   light: {
-    exposure: 0.85,          // Gesamthelligkeit des Bildes (kleiner = dunkler, stimmungsvoller)
-    hemiIntensity: 0.45,     // Grundhelligkeit von oben/unten (kleiner = kräftigere Schatten)
-    hemiSky: '#ffb89a',      // Farbe des Grundlichts von oben (warm)
-    hemiGround: '#3a0806',   // Farbe des Grundlichts von unten (dunkelrot)
-    sunIntensity: 2.6,       // Stärke der Sonne (wirft Schatten)
-    sunColor: '#ffc896',     // Farbe der Sonne (warmes Orange wie in Blender)
-    sunX: -4,                // Sonnen-Position seitlich (links, wie im Blender-Rendering)
-    sunY: 8,                 // Sonnen-Position Höhe (niedriger = längere Schatten)
-    sunZ: 4,                 // Sonnen-Position vorne/hinten
+    // Werte nach dem Blender-Video des Designers: helles, gleichmäßiges Licht, kräftiges Rot
+    exposure: 0.9,           // Gesamthelligkeit des Bildes (kleiner = dunkler)
+    toneMapping: 'agx',      // Farbdarstellung: 'agx' = wie Blender (Standard seit Blender 4), 'aces' = kräftiger/kontrastreicher
+    hemiIntensity: 0.7,      // Grundhelligkeit von oben/unten (kleiner = kräftigere Schatten)
+    hemiSky: '#ffffff',      // Farbe des Grundlichts von oben
+    hemiGround: '#a01818',   // Farbe des Grundlichts von unten (rot vom Boden)
+    sunIntensity: 1.8,       // Stärke der Sonne (wirft Schatten)
+    sunColor: '#fff4ec',     // Farbe der Sonne (fast weiß wie im Blender-Viewport)
+    sunX: -4,                // Sonnen-Position seitlich
+    sunY: 9,                 // Sonnen-Position Höhe (niedriger = längere Schatten)
+    sunZ: 5,                 // Sonnen-Position vorne/hinten
     shadowSize: 2048,        // Schatten-Auflösung (max. 2048, kleiner = schneller)
     shadows: true,           // Schatten an (true) oder aus (false)
     shadowSoftness: 3,       // Weichheit der Schatten-Kanten (0 = hart)
-    contactShadows: true,    // weicher dunkler Fleck direkt unter jeder Figur (wie in Blender)
-    contactShadowStrength: 0.6, // Dunkelheit dieses Flecks (0 = unsichtbar, 1 = schwarz)
-    envIntensity: 0.55,      // Spiegelungen auf Glas/Metall/Ebenholz (0 = aus)
-    fog: true,               // Boden verschwindet in der Ferne im Dunkeln
+    contactShadows: true,    // weicher dunkler Fleck direkt unter jeder Figur
+    contactShadowStrength: 0.45, // Dunkelheit dieses Flecks (0 = unsichtbar, 1 = schwarz)
+    envIntensity: 1.0,       // Spiegelungen auf Glas und Lack (0 = aus)
+    fog: false,              // Boden verschwindet in der Ferne (im Video: nein)
     fogNear: 9,              // ab dieser Entfernung beginnt der Nebel
     fogFar: 24,              // ab dieser Entfernung ist alles im Nebel
   },
@@ -258,9 +269,9 @@ export const CONFIG = {
     maxPixelRatio: 1.5,      // Schärfe (1 = schneller, 1.5 = schärfer)
     playerGlassFallback: false, // true = Glas-Material der Spieler durch schnelles Material ersetzen (bei < 45 fps)
     bloom: true,             // Leuchten (Bloom) um glühende Ränder und Effekte wie in Blender. false = schneller
-    bloomStrength: 0.7,      // Stärke des Leuchtens
+    bloomStrength: 0.3,      // Stärke des Leuchtens
     bloomRadius: 0.5,        // wie weit das Leuchten streut
-    bloomThreshold: 0.9,     // ab welcher Helligkeit etwas leuchtet (kleiner = mehr leuchtet)
+    bloomThreshold: 2.4,     // ab welcher Helligkeit etwas leuchtet (hoch = nur echtes Leuchten wie Lava, Kristalle, Effekte)
   },
 
   // ---------- Modelle aus Blender ----------
@@ -286,12 +297,33 @@ export const CONFIG = {
   // Ersatz-Brett in den Farben "light"/"dark" gebaut.
   // Wichtig: Das Brett in jeder Map heißt in Blender "board" (siehe modelNames).
   maps: [
-    { file: './assets/map1.glb', background: '#1e0605', light: '#c99890', dark: '#4a1510', grid: true }, // Map 1 (Blender-Look: Rosa-/Rotbraun-Marmor)
-    { file: './assets/map2.glb', background: '#0a1024', light: '#9fa9c2', dark: '#1f2c58', grid: true }, // Map 2 (gedämpftes Blau)
-    { file: './assets/map3.glb', background: '#07170e', light: '#a7b59e', dark: '#203f2a', grid: true }, // Map 3 (gedämpftes Grün)
-    { file: './assets/map4.glb', background: '#140a1c', light: '#b7a2bf', dark: '#3a1d50', grid: true }, // Map 4 (gedämpftes Lila)
-    { file: './assets/map5.glb', background: '#150d05', light: '#c4b08c', dark: '#553a10', grid: true }, // Map 5 (gedämpftes Gold-Braun)
+    // Die 5 Maps des Designers liegen alle in einer Datei, jede als eigene Szene (scene).
+    // board = Name des 8×8-Bretts in der Szene, light/dark = Farben der Felder (das Muster kam beim Export nicht mit)
+    { file: './assets/maps/9_BanCo_CacMan.glb', scene: 'Man1_RungNgoc', board: 'BanCo_O_Man1_RungNgoc',
+      background: '#030c06', light: '#9cbfa2', dark: '#1c3a26', grid: false },                 // Map 1: Jade-Wald
+    { file: './assets/maps/9_BanCo_CacMan.glb', scene: 'Man2_CungBang', board: 'BanCo_O_Man2_CungBang',
+      background: '#050c18', light: '#b6c9df', dark: '#26446b', grid: false },                 // Map 2: Eispalast
+    { file: './assets/maps/9_BanCo_CacMan.glb', scene: 'Man3_SaMacHoangKim', board: 'BanCo_O_Man3_SaMacHoangKim',
+      background: '#140902', light: '#dcbd86', dark: '#70420f', grid: false },                 // Map 3: Goldene Wüste
+    { file: './assets/maps/9_BanCo_CacMan.glb', scene: 'Man4_HuKhong', board: 'BanCo_O_Man4_HuKhong',
+      background: '#05020c', light: '#a597c2', dark: '#281848', grid: false },                 // Map 4: Leere
+    { file: './assets/maps/9_BanCo_CacMan.glb', scene: 'Man5_NgaiVangHoaNguc', board: 'BanCo_O_Man5_NgaiVangHoaNguc',
+      background: '#140201', light: '#c98c7a', dark: '#4a0e07', grid: false, decoGlow: 0.08 }, // Map 5: Thron in der Hölle (Lava sonst zu hell)
   ],
+  // Titelbildschirm: das rote Original-Brett aus dem Blender-Video
+  titleMap: { file: './assets/maps/9_BanCo_CacMan.glb', scene: '_Goc_BanCoDo', board: 'BanCo_O',
+    background: '#b30d0d', light: '#f4eeea', dark: '#9a0a12', grid: true },
+  marble: true,              // Marmor-Adern auf allen Brettern (wie in Blender)
+  marbleVeins: '#ffd0d0',    // Farbe der hellen Adern auf dunklen Feldern
+  marbleStrength: 0.45,      // wie deutlich die hellen Adern sind (0 = unsichtbar)
+
+  // Nachbesserungen für die Maps aus Blender
+  mapFix: {
+    excludePrefixes: ['Tot_', 'Ma_', 'Tuong_', 'Xe_', 'Hau_', 'Vua_'], // Figuren in der Map-Szene werden entfernt
+    boardGlow: 0.25,         // Leuchten der Brettfelder (1 = wie in Blender)
+    decoGlow: 1,             // Leuchten der Deko (Glühwürmchen, Schnee, Funken …), 1 = wie in Blender. Pro Map änderbar mit decoGlow
+    glowCap: 4,            // Obergrenze fürs Leuchten: verhindert, dass alles weiß überstrahlt (Farbe bleibt sichtbar)
+  },
   // Welche Map in welcher Runde: Zahl = Nummer der Map (1 bis 5). Erster Eintrag = Runde 1.
   // Die Map wechselt nach jedem besiegten Boss.
   mapPerRound: [1, 2, 3, 4, 5],
@@ -331,18 +363,23 @@ export const CONFIG = {
   // und wären sonst weiß-leuchtend. Hier wird das im Spiel korrigiert.
   materialFix: {
     enabled: true,           // false = Materialien genau so wie aus der .glb-Datei
-    enemyColor: '#3a1209',   // Farbe der Gegner (dunkles Ebenholz mit Rotstich)
-    enemyRoughness: 0.22,    // Glanz der Gegner (klein = glänzender)
-    enemyMetalness: 0.1,     // metallischer Anteil der Gegner
-    enemyGlow: '#6a0c08',    // leichtes rotes Eigenleuchten der Gegner
-    enemyGlowStrength: 0.15, // Stärke dieses Leuchtens (0 = aus)
-    allyGlowScale: 0.1,      // Eigenleuchten der Spieler-Figuren (1 = wie in Blender = sehr hell)
-    rim: true,               // leuchtender Rand um die Figuren (wie in den Blender-Bildern)
-    rimPower: 2.6,           // wie schmal der Rand ist (größer = schmaler)
-    enemyRimColor: '#ff5a1a', // Randfarbe der Gegner (glühendes Orange)
-    enemyRimStrength: 2.2,   // Stärke des Gegner-Rands
-    allyRimColor: '#bfe0ff', // Randfarbe der Spieler (hell, leicht bläulich)
-    allyRimStrength: 1.1,    // Stärke des Spieler-Rands
+    // Gegner wie im Blender-Video: dunkelrot, glänzend wie Lack/Glas
+    enemyColor: '#7a0c12',   // Farbe der Gegner (dunkles Rot)
+    enemyRoughness: 0.12,    // Glanz der Gegner (klein = glänzender)
+    enemyMetalness: 0.0,     // metallischer Anteil der Gegner
+    enemyGlow: '#3a0204',    // leichtes rotes Eigenleuchten der Gegner
+    enemyGlowStrength: 0.2,  // Stärke dieses Leuchtens (0 = aus)
+    enemyClearcoat: 1,       // Lackschicht der Gegner (0 = matt, 1 = Hochglanz)
+    // Spieler wie im Blender-Video: klares Glas
+    allyGlass: true,         // true = Spieler-Figuren aus Glas (durchsichtig), false = Stein-Textur aus der .glb
+    allyGlassTint: '#ffe4e0', // Farbton des Glases (leicht rosa wie im Video)
+    allyGlowScale: 0.1,      // Eigenleuchten der Stein-Figuren (nur wenn allyGlass: false)
+    rim: true,               // leuchtender Rand um die Figuren (macht sie auf dem Brett besser sichtbar)
+    rimPower: 3,             // wie schmal der Rand ist (größer = schmaler)
+    enemyRimColor: '#ff6040', // Randfarbe der Gegner
+    enemyRimStrength: 0.35,  // Stärke des Gegner-Rands (im Video kaum Rand)
+    allyRimColor: '#ffffff', // Randfarbe der Spieler
+    allyRimStrength: 0.7,    // Stärke des Spieler-Rands (macht das Glas auf weißen Feldern sichtbar)
   },
 
   // ---------- Blender-Animationen ----------

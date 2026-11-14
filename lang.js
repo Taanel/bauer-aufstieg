@@ -83,6 +83,8 @@ export const TEXT = {
     skill_lsprung_text: '3 knight leaps there and back – every landing hits all squares next to it',
     skill_sturmlauf_name: 'RAMPAGE',
     skill_sturmlauf_text: 'Charges straight to the edge and rams everything aside',
+    skill_heilung_name: 'HEALING',
+    skill_heilung_text: 'Heals you both – and brings a fallen teammate back',
     skill_sternstrahl_name: 'STAR BEAM',
     skill_sternstrahl_text: '8 golden beams in every direction – like the queen',
     skill_kreuzstrahl_name: 'CROSS BEAM',
