@@ -498,6 +498,13 @@ function edgePoint(x, z, dx, dz) {
   if (dz < 0) t = Math.min(t, (-BOARD_HALF - z) / dz);
   return { x: x + dx * t, z: z + dz * t };
 }
+// Waagerecht und senkrecht durch (x, z) als 4 Strecken bis zum Brettrand
+function straightSegments(x, z) {
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => {
+    const e = edgePoint(x, z, dx, dz);
+    return [x, z, e.x, e.z];
+  });
+}
 // Beide Diagonalen durch (x, z) als 4 Strecken bis zum Brettrand
 function diagonalSegments(x, z) {
   return [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([dx, dz]) => {
@@ -913,9 +920,11 @@ function useSkill(p) {
     p.charge = { toX: end.x, toZ: end.z, dx: f.x, dz: f.z, hits: new Set(), S, lastTile: '' };
     p.faceX = f.x; p.faceZ = f.z;
     SFX.charge();
-  } else if (p.skill === 'kreuzstrahl') {
-    // Kreuzstrahl: 4 Strahlen auf beiden Diagonalen, durchschlagend
+  } else if (p.skill === 'kreuzstrahl' || p.skill === 'sternstrahl') {
+    // Kreuzstrahl: 4 Strahlen auf beiden Diagonalen, durchschlagend.
+    // Sternstrahl (Dame): zusätzlich 4 gerade Strahlen = 8 Richtungen.
     const segs = diagonalSegments(b.x, b.z);
+    if (p.skill === 'sternstrahl') segs.push(...straightSegments(b.x, b.z));
     const hit = new Set();
     for (const t of liveTargets()) {
       if (segs.some(([x1, z1, x2, z2]) => distToSegment(t.x, t.z, x1, z1, x2, z2) <= S.width / 2 + t.radius)) hit.add(t);
@@ -1276,8 +1285,11 @@ let boss = null;
 
 function spawnBoss(round) {
   const r = CONFIG.rounds[round - 1];
-  const b = makeActor('king_dark');
-  b.type = 'king';
+  const b = makeActor(r.boss || 'king_dark');      // welche Figur der Boss ist (config.js → rounds)
+  b.type = 'king';                                  // 'king' = "ist der Boss" (für Treffer-Logik)
+  b.piece.scale.multiplyScalar(B.sizeBoost);        // Bosse etwas größer
+  b.height *= B.sizeBoost;
+  b.attackCount = 0;
   b.radius = B.radius;
   b.x = 0.5; b.z = snap(B.startZ);               // e8 – wo der König im Schach steht
   b.maxHp = b.hp = r.bossHp;
@@ -1358,7 +1370,11 @@ function updateBoss(dt, active) {
 }
 
 // Welches Muster? Hat die Kraft kein eigenes Muster, nimmt der König das Springer-Muster.
-function patternKind(b) { return CONFIG.patterns[b.power] ? b.power : 'knight'; }
+function patternKind(b) {
+  const mix = CONFIG.patternMix?.[b.power];
+  if (mix?.length) return mix[b.attackCount++ % mix.length];    // Dame/König wechseln ab
+  return CONFIG.patterns[b.power] ? b.power : 'knight';
+}
 
 function startBossAttack(b) {
   const kind = patternKind(b);
@@ -1507,7 +1523,8 @@ function damageBoss(b, dmg, fromX, fromZ) {
 function updateBossBar() {
   if (!boss) return;
   const r = CONFIG.rounds[state.round - 1];
-  ui.bossName.textContent = `${t('round', { n: state.round })} – ${roundTitle(state.round)}`;
+  const icons = { knight_dark: '♞', bishop_dark: '♝', rook_dark: '♜', queen_dark: '♛', king_dark: '♚' };
+  ui.bossName.textContent = `${icons[r.boss] ?? '♚'} ${t('round', { n: state.round })} – ${roundTitle(state.round)}`;
   ui.bossFill.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
   ui.bossbar.classList.toggle('enraged', !boss.dead && isEnraged(boss));
 }

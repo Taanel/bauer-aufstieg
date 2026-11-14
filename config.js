@@ -81,10 +81,18 @@ export const CONFIG = {
   // power = welche Figur-Kraft sich der König leiht (knight = Springer, rook = Turm, bishop = Läufer)
   // reward = welche Fähigkeit die Spieler danach bekommen (siehe "skills")
   rounds: [
-    { title: 'DER KÖNIG REITET', power: 'knight', bossHp: 30, reward: 'lsprung' },     // Runde 1
-    { title: 'DER KÖNIG STÜRMT', power: 'rook', bossHp: 40, reward: 'sturmlauf' },     // Runde 2
-    { title: 'DER KÖNIG SEGNET', power: 'bishop', bossHp: 50, reward: 'kreuzstrahl' }, // Runde 3
+    // boss = welche Figur der Boss ist, power = welches Angriffs-Muster (siehe "patterns" und "patternMix")
+    { title: 'DER SPRINGER REITET', boss: 'knight_dark', power: 'knight', bossHp: 30, reward: 'lsprung' },     // Runde 1
+    { title: 'DER LÄUFER SEGNET', boss: 'bishop_dark', power: 'bishop', bossHp: 35, reward: 'kreuzstrahl' },  // Runde 2
+    { title: 'DER TURM STÜRMT', boss: 'rook_dark', power: 'rook', bossHp: 40, reward: 'sturmlauf' },          // Runde 3
+    { title: 'DIE DAME HERRSCHT', boss: 'queen_dark', power: 'queen', bossHp: 50, reward: 'sternstrahl' },     // Runde 4
+    { title: 'SCHACH DEM KÖNIG', boss: 'king_dark', power: 'king', bossHp: 60, reward: '' },                  // Runde 5 (Finale)
   ],
+  // Bosse mit gemischten Angriffen: sie wechseln der Reihe nach zwischen diesen Mustern
+  patternMix: {
+    queen: ['rook', 'bishop'],             // Dame: wie Turm UND Läufer
+    king: ['knight', 'rook', 'bishop'],    // König: alles, was er von seinen Figuren kennt
+  },
 
   // ---------- Der König (Boss) ----------
   boss: {
@@ -99,6 +107,7 @@ export const CONFIG = {
     startZ: -3.5,            // Startreihe (Reihe 8)
     introTime: 2.2,          // Sekunden für den Rundenstart (Schriftzug + Kamerafahrt)
     toppleTime: 1.1,         // Sekunden, bis der besiegte König umgekippt ist
+    sizeBoost: 1.25,         // Bosse sind so viel größer als normale Figuren (1 = gleich groß)
     slowmoTime: 0.5,         // Sekunden Zeitlupe beim Sieg
     slowmoFactor: 0.3,       // Tempo in der Zeitlupe (0.3 = 30 %)
     victoryTime: 2.8,        // Sekunden vom Sieg bis zum Fähigkeiten-Menü
@@ -108,6 +117,8 @@ export const CONFIG = {
     knight: '#ff8c42',       // Springer-Kraft
     rook: '#b388ff',         // Turm-Kraft
     bishop: '#5cffd1',       // Läufer-Kraft
+    queen: '#ff4fd8',        // Dame
+    king: '#ffd36b',         // König (gold)
   },
 
   // ---------- Attacken-Muster des Königs ----------
@@ -159,6 +170,15 @@ export const CONFIG = {
       damage: 4,             // Schaden an allem auf dem Weg
       push: 1.2,             // wie weit Getroffene zur Seite fliegen
       cooldown: 5,           // Abklingzeit (Sekunden)
+    },
+    sternstrahl: {
+      name: 'STERNSTRAHL',   // Name auf der Karte
+      icon: '♛',             // Symbol auf der Karte
+      text: '8 goldene Strahlen in alle Richtungen – wie die Dame', // Einzeiler auf der Karte
+      width: 0.6,            // Breite der Strahlen
+      beamTime: 0.3,         // so lange sind die Strahlen sichtbar
+      damage: 3,             // Schaden pro Gegner
+      cooldown: 6,           // Abklingzeit (Sekunden)
     },
     kreuzstrahl: {
       name: 'KREUZSTRAHL',   // Name auf der Karte

@@ -32,6 +32,8 @@
 
 ## 2. Spielidee (Version 2)
 
+> **5 Bosse (Entscheidung 14.11., 16:20, ersetzt „König leiht sich Kräfte“):** Runde 1 Springer → 2 Läufer → 3 Turm → 4 Dame (wechselt Turm-/Läufer-Muster) → 5 König (wechselt alle drei). Belohnungen: L-Sprung (3 L-Sprünge hin/zurück, Schaden auf Nachbarfeldern), Kreuzstrahl, Sturmlauf, Sternstrahl (8 Richtungen). Einstellbar in `CONFIG.rounds` und `CONFIG.patternMix`. Eine Map pro Runde.
+
 **In einem Satz:** Zwei Bauern kämpfen im lokalen Koop auf einem Schachbrett Runde für Runde gegen den gegnerischen **König**. In jeder Runde leiht sich der König die Kraft einer anderen Figur. Wer ihn besiegt, **erbeutet genau diese Kraft** als Fähigkeit und darf vor der nächsten Runde wählen, welche Fähigkeit er einsetzt.
 
 **Änderung gegenüber Version 1** (Entscheidung des Designers):
