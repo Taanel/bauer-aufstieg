@@ -12,7 +12,7 @@ Zwei Bauern kämpfen an einer Tastatur Runde für Runde gegen den König. In jed
 ## Starten
 
 ```bash
-npm install          # einmalig: lädt Three.js nach node_modules/
+# Three.js liegt schon in lib/three – kein npm install nötig
 python3 server.py 8000
 ```
 

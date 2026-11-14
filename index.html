@@ -199,8 +199,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "./node_modules/three/build/three.module.js",
-        "three/addons/": "./node_modules/three/examples/jsm/"
+        "three": "./lib/three/build/three.module.js",
+        "three/addons/": "./lib/three/examples/jsm/"
       }
     }
   </script>
@@ -288,7 +288,7 @@
 
   <script type="module" src="./main.js"></script>
   <script>
-    // Sicherheitsnetz: Hängt das Laden länger als 20 Sekunden, Seite automatisch neu laden
+    // Sicherheitsnetz: Hängt das Laden länger als 90 Sekunden, Seite automatisch neu laden
     // (höchstens 3-mal hintereinander, damit es keine Endlosschleife gibt).
     setTimeout(() => {
       const stuck = !document.getElementById('loading').classList.contains('hidden');
@@ -300,7 +300,7 @@
       } else if (!stuck) {
         try { sessionStorage.removeItem('reloads'); } catch (e) {}
       }
-    }, 20000);
+    }, 90000);   // 90 s: online (langsames WLAN) braucht das Laden länger
   </script>
 </body>
 </html>

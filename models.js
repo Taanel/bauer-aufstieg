@@ -25,7 +25,7 @@ export const PIECE_KEYS = [
 // in Blender "Kompression" angehakt wurde – sonst werden sie nicht gebraucht.
 const loader = new GLTFLoader();
 const draco = new DRACOLoader();
-draco.setDecoderPath('./node_modules/three/examples/jsm/libs/draco/gltf/');
+draco.setDecoderPath('./lib/three/examples/jsm/libs/draco/gltf/');
 loader.setDRACOLoader(draco);
 loader.setMeshoptDecoder(MeshoptDecoder);
 
